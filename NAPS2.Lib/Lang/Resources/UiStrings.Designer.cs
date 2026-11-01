@@ -176,6 +176,24 @@ namespace NAPS2.Lang.Resources {
                 return ResourceManager.GetString("NewProfile", resourceCulture);
             }
         }
+
+        internal static string ToolbarMenuFormat {
+            get {
+                return ResourceManager.GetString("ToolbarMenuFormat", resourceCulture);
+            }
+        }
+
+        internal static string EmptyStateTitle {
+            get {
+                return ResourceManager.GetString("EmptyStateTitle", resourceCulture);
+            }
+        }
+
+        internal static string EmptyStateDescription {
+            get {
+                return ResourceManager.GetString("EmptyStateDescription", resourceCulture);
+            }
+        }
         
         internal static string BatchScan {
             get {

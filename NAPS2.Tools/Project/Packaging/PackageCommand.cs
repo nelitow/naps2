@@ -64,7 +64,7 @@ public class PackageCommand : ICommand<PackageOptions>
         string arch = platform == Platform.WinArm64 ? "win-arm64" : "win-x64";
 
         foreach (var project in new[]
-                     { "NAPS2.App.WinForms", "NAPS2.App.Console" })
+                     { "NAPS2.App.Wpf", "NAPS2.App.Console" })
         {
             var buildPath = Path.Combine(Paths.SolutionRoot, project, "bin", "Release", "net10.0-windows", arch,
                 "publish");
@@ -84,7 +84,7 @@ public class PackageCommand : ICommand<PackageOptions>
         // publish folder as the worker is published as a single file.
         AddPlatformFile(pkgInfo, workerBuildPath, "_win32", "naps2_jpeg.dll");
 
-        var appBuildPath = Path.Combine(Paths.SolutionRoot, "NAPS2.App.WinForms", "bin", "Release", "net10.0-windows",
+        var appBuildPath = Path.Combine(Paths.SolutionRoot, "NAPS2.App.Wpf", "bin", "Release", "net10.0-windows",
             arch, "publish");
         if (platform == Platform.Win64)
         {
@@ -113,17 +113,6 @@ public class PackageCommand : ICommand<PackageOptions>
             "System.Data",
             "System.Private.DataContract",
             "System.Windows.Forms.Design",
-            // For WPF
-            "D3D",
-            "Presentation",
-            "Reach",
-            "System.Windows.Controls.Ribbon",
-            "System.Windows.Input",
-            "System.Windows.Presentation",
-            "System.Xaml",
-            "UIAutomation",
-            "WindowsBase",
-            "wpfgfx",
             // For debugging
             "createdump",
             "Microsoft.DiaSymReader",

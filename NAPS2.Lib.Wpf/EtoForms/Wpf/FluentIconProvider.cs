@@ -11,20 +11,11 @@ using Point = System.Windows.Point;
 namespace NAPS2.EtoForms.Wpf;
 
 /// <summary>
-/// Uses Fluent icon font glyphs instead of some of NAPS2's icons, falling back to the default icons for everything
-/// else.
+/// Uses Fluent icon font glyphs instead of NAPS2's icons, falling back to the default icons for anything without a
+/// glyph.
 /// </summary>
 internal class FluentIconProvider : IIconProvider
 {
-    // Unlike Mac (where we map all icons), here we're only mapping the icons for small buttons
-    private static readonly Dictionary<string, string> GlyphMap = new()
-    {
-        { "pencil", FluentIcons.Edit },
-        { "add", FluentIcons.Add },
-        { "control_play_blue", FluentIcons.Play },
-        { "cross", FluentIcons.Delete }
-    };
-
     private readonly DefaultIconProvider _defaultIconProvider;
 
     public FluentIconProvider(DefaultIconProvider defaultIconProvider)
@@ -33,7 +24,7 @@ internal class FluentIconProvider : IIconProvider
     }
 
     public Bitmap? GetIcon(string name, IconScenario scenario, float scale = 1f) =>
-        scenario == IconScenario.Button && GlyphMap.TryGetValue(name, out var glyph)
+        FluentIcons.ForIconName(name) is { } glyph
             ? RenderGlyph(glyph, scenario.ToSize(), scale)
             : _defaultIconProvider.GetIcon(name, scenario, scale);
 

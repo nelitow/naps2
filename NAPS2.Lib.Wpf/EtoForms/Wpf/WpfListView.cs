@@ -22,6 +22,7 @@ public class WpfListView<T> : IListView<T> where T : notnull
 
     private ListSelection<T> _selection = ListSelection.Empty<T>();
     private bool _refreshing;
+    private bool _useContentLayer;
 
     private Point? _dragStartPoint;
     private WpfListViewItem<T>? _deferredSelectItem;
@@ -71,10 +72,31 @@ public class WpfListView<T> : IListView<T> where T : notnull
 
     private void OnColorSchemeChanged(object? sender, EventArgs e) => _listBox.Dispatcher.Invoke(UpdateColors);
 
+    /// <summary>
+    /// Draws the list as a Fluent content layer, i.e. a rounded surface on top of the window's base layer. The given
+    /// corner radius should only round the corners that aren't against the window's edge.
+    /// </summary>
+    public void UseContentLayer(CornerRadius cornerRadius, Thickness borderThickness)
+    {
+        _useContentLayer = true;
+        _listBox.Template = XamlTemplates.ContentLayerListBoxTemplate;
+        _listBox.SetValue(Border.CornerRadiusProperty, cornerRadius);
+        _listBox.BorderThickness = borderThickness;
+        UpdateColors();
+    }
+
     private void UpdateColors()
     {
-        _listBox.Background = _behavior.ColorScheme.BackgroundColor.ToWpfBrush();
-        _listBox.BorderBrush = _behavior.ColorScheme.SeparatorColor.ToWpfBrush();
+        if (_useContentLayer)
+        {
+            _listBox.SetResourceReference(ListBox.BackgroundProperty, "LayerFillColorDefaultBrush");
+            _listBox.SetResourceReference(ListBox.BorderBrushProperty, "CardStrokeColorDefaultBrush");
+        }
+        else
+        {
+            _listBox.Background = _behavior.ColorScheme.BackgroundColor.ToWpfBrush();
+            _listBox.BorderBrush = _behavior.ColorScheme.SeparatorColor.ToWpfBrush();
+        }
         foreach (var listBoxItem in Items)
         {
             listBoxItem.UpdateVisuals();
@@ -283,7 +305,8 @@ public class WpfListView<T> : IListView<T> where T : notnull
 
     private void UpdatePageNumbers()
     {
-        if (!_behavior.ShowPageNumbers || _behavior.ShowLabels) return;
+        // Even when page numbers aren't shown, items still use them as their accessible name
+        if (_behavior.ShowLabels) return;
         int count = _listBox.Items.Count;
         int i = 0;
         foreach (var listBoxItem in Items)

@@ -11,7 +11,7 @@ public class TestCommand : ICommand<TestOptions>
             ? $"NAPS2.App.Mac/bin/Debug/net10.0-macos/osx-{arch}"
             : OperatingSystem.IsLinux()
                 ? $"NAPS2.App.Gtk/bin/Debug/net10.0/linux-{arch}"
-                : $"NAPS2.App.WinForms/bin/Debug/net10.0-windows/win-{arch}";
+                : $"NAPS2.App.Wpf/bin/Debug/net10.0-windows/win-{arch}";
         var frameworkArg = OperatingSystem.IsWindows() ? "" : "-f net10.0";
         bool ranTests = false;
 

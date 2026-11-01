@@ -11,6 +11,9 @@ using NAPS2.EtoForms.Notifications;
 using NAPS2.EtoForms.Widgets;
 using NAPS2.EtoForms.Wpf;
 using Button = System.Windows.Controls.Button;
+using Grid = System.Windows.Controls.Grid;
+using HorizontalAlignment = System.Windows.HorizontalAlignment;
+using TextAlignment = System.Windows.TextAlignment;
 using VerticalAlignment = System.Windows.VerticalAlignment;
 using Command = Eto.Forms.Command;
 using ContextMenu = System.Windows.Controls.ContextMenu;
@@ -23,6 +26,8 @@ namespace NAPS2.EtoForms.Ui;
 
 public class WpfDesktopForm : DesktopForm
 {
+    private const int EMPTY_STATE_TEXT_WIDTH = 420;
+
     private readonly WpfToolbarFormatter _toolbarFormatter = new();
     private readonly Dictionary<DesktopToolbarMenuType, (FrameworkElement target, ContextMenu menu)> _menus = new();
     private readonly ToolBar _profilesToolBar = new();
@@ -32,6 +37,7 @@ public class WpfDesktopForm : DesktopForm
     private readonly Border _profilesToolbarBorder = new() { Visibility = Visibility.Collapsed };
     private ContentControl _toolbarHolder = null!;
     private ToolBar _mainToolBar = null!;
+    private FrameworkElement? _emptyState;
 
     public WpfDesktopForm(
         Naps2Config config,
@@ -91,9 +97,104 @@ public class WpfDesktopForm : DesktopForm
     {
         base.OnLoad(e);
         PlaceToolbars();
-        // Separator between the sidebar and the listview
-        WpfListView.NativeControl.BorderThickness = new Thickness(1, 0, 0, 0);
+        // The window (toolbar + sidebar) is the base layer, with the pages on a rounded layer on top
+        WpfListView.UseContentLayer(new CornerRadius(8, 0, 0, 0), new Thickness(1, 1, 0, 0));
         WpfListView.NativeControl.Focus();
+    }
+
+    protected override LayoutElement BuildSidebarLayout(LayoutElement mainContent)
+    {
+        _emptyState = CreateEmptyState();
+        return base.BuildSidebarLayout(L.Overlay(mainContent, _emptyState.ToEto()).Scale());
+    }
+
+    private FrameworkElement CreateEmptyState()
+    {
+        var scanButton = WpfToolbarFormatter.CreateSubtleButton(CreateEmptyStateButtonContent(Commands.Scan));
+        WpfToolbarFormatter.MakeAccent(scanButton, new CornerRadius(4));
+        scanButton.BindCommand(Commands.Scan);
+        scanButton.Padding = new Thickness(20, 8, 20, 8);
+        var importButton = WpfToolbarFormatter.CreateSubtleButton(CreateEmptyStateButtonContent(Commands.Import));
+        importButton.BindCommand(Commands.Import);
+        importButton.Padding = new Thickness(20, 8, 20, 8);
+        importButton.Margin = new Thickness(8, 0, 0, 0);
+
+        // With no background, this only takes mouse input over the buttons, so files can still be dropped on the list
+        return new Grid
+        {
+            Children =
+            {
+                new StackPanel
+                {
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Children =
+                    {
+                        CreateEmptyStateText(FluentIcons.Scan, 56, "TextFillColorTertiaryBrush",
+                            fontFamily: FluentIcons.FontFamily),
+                        CreateEmptyStateText(UiStrings.EmptyStateTitle, 20, "TextFillColorPrimaryBrush",
+                            FontWeights.SemiBold, new Thickness(0, 16, 0, 4)),
+                        CreateEmptyStateText(UiStrings.EmptyStateDescription, 14, "TextFillColorSecondaryBrush"),
+                        new StackPanel
+                        {
+                            Orientation = Orientation.Horizontal,
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            Margin = new Thickness(0, 20, 0, 0),
+                            Children = { scanButton, importButton }
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+    private static TextBlock CreateEmptyStateText(string text, double size, string brushKey,
+        FontWeight? weight = null, Thickness margin = default, FontFamily? fontFamily = null)
+    {
+        var textBlock = new TextBlock
+        {
+            Text = text,
+            FontSize = size,
+            FontWeight = weight ?? FontWeights.Normal,
+            Margin = margin,
+            TextAlignment = TextAlignment.Center,
+            TextWrapping = TextWrapping.Wrap,
+            MaxWidth = EMPTY_STATE_TEXT_WIDTH,
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        if (fontFamily != null) textBlock.FontFamily = fontFamily;
+        textBlock.SetResourceReference(TextBlock.ForegroundProperty, brushKey);
+        return textBlock;
+    }
+
+    private FrameworkElement CreateEmptyStateButtonContent(Command command)
+    {
+        var glyph = FluentIcons.ForIconName(((ActionCommand) command).IconName);
+        return new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Children =
+            {
+                new TextBlock
+                {
+                    Text = glyph,
+                    FontFamily = FluentIcons.FontFamily,
+                    FontSize = 16,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(0, 0, 8, 0)
+                },
+                new TextBlock { Text = command.ToolBarText, VerticalAlignment = VerticalAlignment.Center }
+            }
+        };
+    }
+
+    protected override void UpdateToolbar()
+    {
+        base.UpdateToolbar();
+        if (_emptyState != null)
+        {
+            _emptyState.Visibility = ImageList.Images.Any() ? Visibility.Collapsed : Visibility.Visible;
+        }
     }
 
     protected override void OnLoadComplete(EventArgs e)
@@ -162,13 +263,13 @@ public class WpfDesktopForm : DesktopForm
         tray.Orientation = dock is DockStyle.Left or DockStyle.Right
             ? Orientation.Vertical
             : Orientation.Horizontal;
-        // Separator between the toolbar and the content
+        // Separator between the toolbar and the content. At the top, the content layer's border does this instead.
         border.BorderThickness = dock switch
         {
             DockStyle.Left => new Thickness(0, 0, 1, 0),
             DockStyle.Bottom => new Thickness(0, 1, 0, 0),
             DockStyle.Right => new Thickness(1, 0, 0, 0),
-            _ => new Thickness(0, 0, 0, 1)
+            _ => new Thickness(0)
         };
     }
 
@@ -182,8 +283,7 @@ public class WpfDesktopForm : DesktopForm
         _profilesToolBar.Items.Clear();
         foreach (var profile in _profileManager.Profiles)
         {
-            var (content, image, _) = _toolbarFormatter.CreateButtonContent(profile.DisplayName, false);
-            SetIcon(image, scale => _iconProvider.GetIcon("control_play_blue", IconScenario.SmallToolbar, scale));
+            var (content, _, _) = _toolbarFormatter.CreateButtonContent(profile.DisplayName, false, FluentIcons.Scan);
             var button = _toolbarFormatter.CreateProfileButton(content);
             button.Click += (_, _) => _desktopScanController.ScanWithProfile(profile);
             _profilesToolBar.Items.Add(button);
@@ -210,12 +310,14 @@ public class WpfDesktopForm : DesktopForm
     protected override void CreateToolbarButtonWithMenu(Command command, DesktopToolbarMenuType menuType,
         MenuProvider menu)
     {
+        // Scanning is the main thing you do in this window, so it's the one action with the accent color
+        bool isAccent = menuType == DesktopToolbarMenuType.Scan;
         // WPF has no split button, so we put a regular button next to a narrow dropdown button
         var mainButton = _toolbarFormatter.CreateLargeButton(
-            CreateButtonContent(command, true), isSplit: true);
+            CreateButtonContent(command, true), isSplit: true, isAccent: isAccent);
         mainButton.BindCommand(command);
-        var arrowButton = _toolbarFormatter.CreateArrowButton();
-        AutomationProperties.SetName(arrowButton, command.ToolBarText);
+        var arrowButton = _toolbarFormatter.CreateArrowButton(isAccent);
+        AutomationProperties.SetName(arrowButton, string.Format(UiStrings.ToolbarMenuFormat, command.ToolBarText));
         DockPanel.SetDock(arrowButton, Dock.Right);
         var group = new DockPanel { Children = { arrowButton, mainButton } };
         var contextMenu = menu.ToWpfContextMenu(this);
@@ -300,9 +402,13 @@ public class WpfDesktopForm : DesktopForm
 
     private FrameworkElement CreateButtonContent(Command command, bool large)
     {
-        var (content, image, label) = _toolbarFormatter.CreateButtonContent(command.ToolBarText, large);
         var actionCommand = (ActionCommand) command;
-        SetIcon(image, scale => actionCommand.GetIconImage(large ? IconScenario.Toolbar : IconScenario.SmallToolbar, scale));
+        var glyph = actionCommand.Image == null ? FluentIcons.ForIconName(actionCommand.IconName) : null;
+        var (content, image, label) = _toolbarFormatter.CreateButtonContent(command.ToolBarText, large, glyph);
+        if (glyph == null)
+        {
+            SetIcon(image, scale => actionCommand.GetIconImage(large ? IconScenario.Toolbar : IconScenario.SmallToolbar, scale));
+        }
         actionCommand.TextChanged += (_, _) => label.Text = command.ToolBarText;
         return content;
     }

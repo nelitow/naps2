@@ -31,6 +31,18 @@ internal static class XamlTemplates
         (ControlTemplate) Templates["SubtleButtonTemplate"]!;
 
     /// <summary>
+    /// A button template filled with the system accent color, for a window's primary action.
+    /// </summary>
+    public static ControlTemplate AccentButtonTemplate { get; } =
+        (ControlTemplate) Templates["AccentButtonTemplate"]!;
+
+    /// <summary>
+    /// A list template with corners from Border.CornerRadius on the list, for drawing it as a Fluent content layer.
+    /// </summary>
+    public static ControlTemplate ContentLayerListBoxTemplate { get; } =
+        (ControlTemplate) Templates["ContentLayerListBoxTemplate"]!;
+
+    /// <summary>
     /// A focus rectangle drawn inside the control's bounds, for controls at the edge of a clipping container.
     /// </summary>
     public static Style InsetFocusVisualStyle { get; } = (Style) Templates["InsetFocusVisualStyle"]!;

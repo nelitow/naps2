@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -20,8 +21,7 @@ internal class WpfListViewItem<T> : ListBoxItem where T : notnull
 
     private const int BORDER_THICKNESS = 1;
     private const int SELECTED_BORDER_THICKNESS = 3;
-    private static readonly Brush SelectedBorderBrush =
-        (Brush) new SolidColorBrush(Color.FromRgb(0x60, 0xa0, 0xe8)).GetAsFrozen();
+    private const byte SELECTED_BACKGROUND_ALPHA = 0x33;
 
     private readonly ListViewBehavior<T> _behavior;
     private readonly Image _image = new() { Stretch = Stretch.Fill };
@@ -67,6 +67,7 @@ internal class WpfListViewItem<T> : ListBoxItem where T : notnull
         if (behavior.ShowLabels)
         {
             _label.Text = behavior.GetLabel(value);
+            AutomationProperties.SetName(this, _label.Text);
             _label.FontSize = 12;
             Padding = new Thickness(4);
             VerticalAlignment = VerticalAlignment.Top;
@@ -100,7 +101,12 @@ internal class WpfListViewItem<T> : ListBoxItem where T : notnull
         UpdateSize(imageSize);
     }
 
-    public void SetPageNumber(int number, int count) => _label.Text = $"{number} / {count}";
+    public void SetPageNumber(int number, int count)
+    {
+        _label.Text = $"{number} / {count}";
+        // Otherwise screen readers announce the type name of this class
+        AutomationProperties.SetName(this, _label.Text);
+    }
 
     public void UpdateSize(Eto.Drawing.Size imageSize)
     {
@@ -129,13 +135,16 @@ internal class WpfListViewItem<T> : ListBoxItem where T : notnull
     public void UpdateVisuals()
     {
         if (_behavior.ShowLabels) return;
-        var colors = _behavior.ColorScheme;
         var imageBorderBrush = (SolidColorBrush) Application.Current.FindResource("ControlStrongStrokeColorDefaultBrush")!;
+        var accentBrush = (SolidColorBrush) Application.Current.FindResource("AccentFillColorDefaultBrush")!;
         if (_behavior.ShowPageNumbers)
         {
             // Highlight the whole item (including the page number), with no image border
-            Background = IsSelected ? colors.HighlightBackgroundColor.ToWpfBrush() : Brushes.Transparent;
-            BorderBrush = IsSelected ? colors.HighlightBorderColor.ToWpfBrush() : Brushes.Transparent;
+            var accent = accentBrush.Color;
+            Background = IsSelected
+                ? new SolidColorBrush(Color.FromArgb(SELECTED_BACKGROUND_ALPHA, accent.R, accent.G, accent.B))
+                : Brushes.Transparent;
+            BorderBrush = IsSelected ? accentBrush : Brushes.Transparent;
             _imageBorder.BorderBrush = IsSelected ? Brushes.Transparent : imageBorderBrush;
             _imageBorder.BorderThickness = new Thickness(BORDER_THICKNESS);
             _imageBorder.Margin = new Thickness(0);
@@ -145,7 +154,7 @@ internal class WpfListViewItem<T> : ListBoxItem where T : notnull
         BorderBrush = Brushes.Transparent;
         // Grow the border outwards so the image doesn't move
         int extra = SELECTED_BORDER_THICKNESS - BORDER_THICKNESS;
-        _imageBorder.BorderBrush = IsSelected ? SelectedBorderBrush : imageBorderBrush;
+        _imageBorder.BorderBrush = IsSelected ? accentBrush : imageBorderBrush;
         _imageBorder.BorderThickness = new Thickness(IsSelected ? SELECTED_BORDER_THICKNESS : BORDER_THICKNESS);
         _imageBorder.Margin = new Thickness(IsSelected ? -extra : 0);
     }

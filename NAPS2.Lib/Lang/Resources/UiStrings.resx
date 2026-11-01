@@ -183,6 +183,15 @@
   <data name="NewProfile" xml:space="preserve">
     <value>New Profile</value>
   </data>
+  <data name="ToolbarMenuFormat" xml:space="preserve">
+    <value>{0} options</value>
+  </data>
+  <data name="EmptyStateTitle" xml:space="preserve">
+    <value>Scan your first page</value>
+  </data>
+  <data name="EmptyStateDescription" xml:space="preserve">
+    <value>Put a document in your scanner and select Scan, or drag files here to import them.</value>
+  </data>
   <data name="BatchScan" xml:space="preserve">
     <value>Batch Scan</value>
   </data>

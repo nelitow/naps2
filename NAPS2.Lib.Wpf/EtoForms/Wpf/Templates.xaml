@@ -1,12 +1,26 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- A plain list item template for thumbnails. -->
+    <!-- A plain list item template for thumbnails, with a hover highlight for unselected items. -->
     <ControlTemplate x:Key="ThumbnailItemTemplate" TargetType="ListBoxItem">
-        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
-            <ContentPresenter />
-        </Border>
+        <Grid>
+            <Border x:Name="hover" CornerRadius="6" />
+            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}"
+                    CornerRadius="6">
+                <ContentPresenter />
+            </Border>
+        </Grid>
+        <ControlTemplate.Triggers>
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="IsMouseOver" Value="True" />
+                    <Condition Property="IsSelected" Value="False" />
+                </MultiTrigger.Conditions>
+                <Setter TargetName="hover" Property="Background"
+                        Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            </MultiTrigger>
+        </ControlTemplate.Triggers>
     </ControlTemplate>
 
     <!-- A list item template that shows the content as a checkbox, checked when the item is selected. -->
@@ -30,6 +44,39 @@
                 <Setter TargetName="bd" Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}" />
             </Trigger>
             <!-- WPF doesn't grey out images in disabled buttons -->
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="bd" Property="Opacity" Value="0.45" />
+            </Trigger>
+        </ControlTemplate.Triggers>
+    </ControlTemplate>
+
+    <!-- A list drawn as a Fluent content layer. The Fluent ListBox template doesn't let the corners be set. -->
+    <ControlTemplate x:Key="ContentLayerListBoxTemplate" TargetType="ListBox">
+        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{Binding (Border.CornerRadius), RelativeSource={RelativeSource TemplatedParent}}">
+            <ScrollViewer Focusable="False" Padding="{TemplateBinding Padding}">
+                <ItemsPresenter />
+            </ScrollViewer>
+        </Border>
+    </ControlTemplate>
+
+    <!-- A button filled with the system accent color. The corners come from Border.CornerRadius on the button, so the
+         parts of a split button can join up. -->
+    <ControlTemplate x:Key="AccentButtonTemplate" TargetType="Button">
+        <Border x:Name="bd" Background="{DynamicResource AccentFillColorDefaultBrush}"
+                CornerRadius="{Binding (Border.CornerRadius), RelativeSource={RelativeSource TemplatedParent}}">
+            <ContentPresenter Margin="{TemplateBinding Padding}"
+                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+        </Border>
+        <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentFillColorSecondaryBrush}" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="bd" Property="Background" Value="{DynamicResource AccentFillColorTertiaryBrush}" />
+            </Trigger>
             <Trigger Property="IsEnabled" Value="False">
                 <Setter TargetName="bd" Property="Opacity" Value="0.45" />
             </Trigger>

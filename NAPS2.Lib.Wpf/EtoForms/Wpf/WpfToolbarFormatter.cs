@@ -14,6 +14,8 @@ public class WpfToolbarFormatter
     // Toolbar text wraps at this width
     private const int MAX_LABEL_WIDTH = 80;
 
+    private const int LARGE_ICON_SIZE = 20;
+
     // Progressively more compact toolbar layouts, used when the toolbar doesn't fit in the window
     private static readonly ToolbarDensity[] Densities =
     [
@@ -35,13 +37,26 @@ public class WpfToolbarFormatter
 
     /// <summary>
     /// Creates the content for a toolbar button: a large icon with text below, or a small icon with text to the right.
-    /// The caller is responsible for setting the image source.
+    /// If there's no glyph, the caller is responsible for setting the image source.
     /// </summary>
-    public (FrameworkElement content, Image image, TextBlock label) CreateButtonContent(string text, bool large)
+    public (FrameworkElement content, Image image, TextBlock label) CreateButtonContent(
+        string text, bool large, string? glyph = null)
     {
-        int iconSize = large ? 32 : 16;
+        int iconSize = large ? LARGE_ICON_SIZE : 16;
         var image = new Image { Width = iconSize, Height = iconSize };
         RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
+        // A glyph is drawn as text rather than a bitmap, so it follows the button's foreground color and theme
+        FrameworkElement icon = glyph == null
+            ? image
+            : new TextBlock
+            {
+                Text = glyph,
+                FontFamily = FluentIcons.FontFamily,
+                FontSize = iconSize,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextAlignment = TextAlignment.Center
+            };
         var label = new TextBlock
         {
             Text = text,
@@ -56,7 +71,7 @@ public class WpfToolbarFormatter
         {
             Orientation = large ? Orientation.Vertical : Orientation.Horizontal,
             MinWidth = large ? Densities[0].ContentMinWidth : 0,
-            Children = { image, label }
+            Children = { icon, label }
         };
         return (content, image, label);
     }
@@ -65,19 +80,21 @@ public class WpfToolbarFormatter
     /// Creates a button with large content. If it's the main part of a split button, its
     /// right padding is reduced so it sits next to the arrow.
     /// </summary>
-    public Button CreateLargeButton(FrameworkElement content, bool isSplit = false)
+    public Button CreateLargeButton(FrameworkElement content, bool isSplit = false, bool isAccent = false)
     {
         var button = StyleButton(new Button
         {
             Content = content,
             // Centers the content when the button is stretched in a vertical toolbar
-            HorizontalContentAlignment = HorizontalAlignment.Center
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center
         });
+        if (isAccent) MakeAccent(button, isSplit ? new CornerRadius(4, 0, 0, 4) : new CornerRadius(4));
         _largeButtons.Add((button, content, isSplit));
         return button;
     }
 
-    public Button CreateArrowButton()
+    public Button CreateArrowButton(bool isAccent = false)
     {
         var button = StyleButton(new Button
         {
@@ -92,8 +109,24 @@ public class WpfToolbarFormatter
             HorizontalContentAlignment = HorizontalAlignment.Center,
             VerticalContentAlignment = VerticalAlignment.Center
         });
+        if (isAccent)
+        {
+            MakeAccent(button, new CornerRadius(0, 4, 4, 0));
+            // Visually separates the two parts of the split button
+            button.Margin = new Thickness(1, 0, 0, 0);
+        }
         _arrowButtons.Add(button);
         return button;
+    }
+
+    /// <summary>
+    /// Fills the button with the system accent color, which marks it as the window's primary action.
+    /// </summary>
+    public static void MakeAccent(Button button, CornerRadius cornerRadius)
+    {
+        button.Template = XamlTemplates.AccentButtonTemplate;
+        button.SetValue(Border.CornerRadiusProperty, cornerRadius);
+        button.SetResourceReference(Control.ForegroundProperty, "TextOnAccentFillColorPrimaryBrush");
     }
 
     public Button CreateStackedButton(FrameworkElement content)
@@ -115,6 +148,14 @@ public class WpfToolbarFormatter
 
     public Button CreateProfileButton(FrameworkElement content) =>
         StyleButton(new Button { Content = content, Padding = new Thickness(6, 4, 6, 4) });
+
+    public static Button CreateSubtleButton(object content)
+    {
+        var button = StyleButton(new Button { Content = content });
+        button.HorizontalContentAlignment = HorizontalAlignment.Center;
+        button.VerticalContentAlignment = VerticalAlignment.Center;
+        return button;
+    }
 
     public void Clear()
     {
